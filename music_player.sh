@@ -18,6 +18,7 @@ alias msw="switch_playlist"  # Music switch playlist
 alias mf="seek_forward"      # Music forward 30s
 alias mb="seek_backward"     # Music back 30s
 alias msh="shuffle_play"     # Music shuffle
+alias hlp="quick_help"    # Quick help for aliases
 
 # Function to start mpv with proper options
 start_mpv() {
@@ -193,14 +194,16 @@ show_live_status() {
     echo -e "\033[?25l"  # Hide cursor
     
     # Save current terminal state
-    local term_state
-    stty -g > /dev/null 2>&1
-    term_state=$?
+    stty -echo -icanon   # Set terminal to raw mode
     
-    # Set terminal to raw mode
-    stty raw -echo
-
     while true; do
+        # Check for 'q' keypress immediately
+        if read -t 0.1 -k 1 input; then
+            if [[ "$input" == "q" ]]; then
+                break
+            fi
+        fi
+        
         # Clear previous lines and move cursor up
         echo -en "\r\033[K"  # Clear current line
         echo -en "\033[2A"   # Move up 2 lines
@@ -232,19 +235,10 @@ show_live_status() {
         else
             echo -en "\r[0:00 / 0:00] [                                                ]"
         fi
-        
-        # Check for 'q' keypress
-        if read -t 0.1 -N 1 input; then
-            if [[ "$input" == "q" ]]; then
-                break
-            fi
-        fi
     done
     
     # Restore terminal state
-    if [[ $term_state -eq 0 ]]; then
-        stty $(stty -g)
-    fi
+    stty echo icanon
     
     echo -e "\n"  # Move to new line
     echo -e "\033[?25h"  # Show cursor
@@ -349,6 +343,24 @@ show_status() {
         echo "Duration: Unknown"
     fi
 }
+
+quick_help() {
+    cat << 'EOF'
+Quick Commands:
+  mx NUM/LABEL  - Play song (by number or name)
+  mn/mp         - Next/Previous song
+  mt           - Toggle play/pause
+  ms           - Show live status
+  mv +/-N      - Volume up/down
+  ml           - List songs
+  mpl          - List playlists
+  msw NAME     - Switch playlist
+  mf/mb        - Forward/Back 30s
+  msh          - Shuffle play
+
+EOF
+}
+
 
 # Function to show all available commands
 help() {
