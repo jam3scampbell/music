@@ -32,7 +32,7 @@ get_mpv_property() {
     echo '{"command": ["get_property", "'$property'"]}' | \
         socat - ${SOCKET_PATH} 2>/dev/null | \
         grep -o '"data":[^,}]*' | \
-        sed 's/"data"://; s/"//g'
+        sed 's/\"data\"://; s/\"//g'
 }
 
 # Function to list available playlists
