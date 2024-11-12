@@ -29,10 +29,12 @@ start_mpv() {
 # Helper function to get a property from mpv
 get_mpv_property() {
     local property=$1
-    echo '{"command": ["get_property", "'$property'"]}' | \
+    local cmd='{"command": ["get_property", "'
+    local end='"]}'
+    echo "$cmd$property$end" | \
         socat - ${SOCKET_PATH} 2>/dev/null | \
         grep -o '"data":[^,}]*' | \
-        sed 's/\"data\"://; s/\"//g'
+        cut -d':' -f2
 }
 
 # Function to list available playlists
@@ -43,24 +45,22 @@ list_playlists() {
     ls -1 *.txt
 }
 
-# Function to switch to a different playlist
 switch_playlist() {
     local playlist_name=$1
-    if [[ -z "$playlist_name" ]]; then
+    if [ -z "$playlist_name" ]; then
         echo "Please specify a playlist name"
         list_playlists
         return 1
     fi
-    
-    # If just the name is given without .txt, append it
-    if [[ ! $playlist_name =~ \.txt$ ]]; then
-        playlist_name="${playlist_name}.txt"
-    fi
-    
-    if [[ -f "$playlist_name" ]]; then
+    case "$playlist_name" in
+        *.txt) ;;
+        *) playlist_name=$playlist_name.txt ;;
+    esac
+
+    if [ -f "$playlist_name" ]; then
         CURRENT_PLAYLIST="$playlist_name"
         echo "Switched to playlist: $playlist_name"
-        stop_playback  # Stop current playback when switching playlists
+        stop_playback
     else
         echo "Playlist not found: $playlist_name"
         list_playlists
@@ -352,57 +352,66 @@ show_status() {
 
 # Function to show all available commands
 help() {
-    echo "Music Player Commands:"
-    echo ""
-    echo "Playback Control:"
-    echo "  play_song NUMBER   - Play song by number"
-    echo "  play_song 'LABEL'  - Play song by label search"
-    echo "  play_playlist      - Start playing full playlist"
-    echo "  shuffle_play       - Shuffle and play playlist"
-    echo "  next_song         - Skip to next song"
-    echo "  previous_song     - Go to previous song"
-    echo "  toggle_pause      - Pause/unpause playback"
-    echo "  stop_playback     - Stop playing"
-    echo ""
-    echo "Navigation:"
-    echo "  seek +/-N         - Seek N seconds forward/backward"
-    echo "  seek mm:ss        - Seek to specific timestamp"
-    echo "  seek_forward      - Skip forward 30 seconds"
-    echo "  seek_backward     - Skip backward 30 seconds"
-    echo ""
-    echo "Status and Information:"
-    echo "  show_status       - Show current track info"
-    echo "  show_live_status  - Show live updating display with progress bar"
-    echo "  list_songs        - Show all available songs"
-    echo ""
-    echo "Playlist Management:"
-    echo "  list_playlists    - Show all available playlists"
-    echo "  switch PLAYLIST   - Switch to a different playlist (e.g., switch rock)"
-    echo "  create PLAYLIST   - Create a new empty playlist (e.g., create jazz)"
-    echo ""
-    echo "Volume Control:"
-    echo "  adjust_volume +/-N - Adjust volume (e.g., adjust_volume +10)"
-    echo ""
-    echo "Aliases (Shortcuts):"
-    echo "  mx NUMBER/LABEL    - Play song (mx for 'music play')"
-    echo "  mn                 - Next song"
-    echo "  mp                 - Previous song"
-    echo "  mt                 - Toggle play/pause"
-    echo "  ms                 - Show live status"
-    echo "  mv +/-N           - Adjust volume"
-    echo "  ml                 - List songs"
-    echo "  mpl               - List playlists"
-    echo "  msw PLAYLIST      - Switch playlist"
-    echo "  mf                - Forward 30s"
-    echo "  mb                - Back 30s"
-    echo "  msh               - Shuffle play"
-    echo ""
-    echo "Tips:"
-    echo "- All playlists are .txt files in the current directory"
-    echo "- Use tab completion for playlist names with the switch command"
-    echo "- The live status display (ms) can be exited by pressing 'q'"
-    echo "- You can use partial matches for song labels (e.g., mx drak)"
-    echo ""
-    echo "Examples:"
-    echo "  ml                        # List available songs"
-    echo "  mx 3
+    cat << 'EOF'
+Music Player Commands:
+
+Playback Control:
+  play_song NUMBER   - Play song by number
+  play_song 'LABEL'  - Play song by label search
+  play_playlist      - Start playing full playlist
+  shuffle_play       - Shuffle and play playlist
+  next_song         - Skip to next song
+  previous_song     - Go to previous song
+  toggle_pause      - Pause/unpause playback
+  stop_playback     - Stop playing
+
+Navigation:
+  seek +/-N         - Seek N seconds forward/backward
+  seek mm:ss        - Seek to specific timestamp
+  seek_forward      - Skip forward 30 seconds
+  seek_backward     - Skip backward 30 seconds
+
+Status and Information:
+  show_status       - Show current track info
+  show_live_status  - Show live updating display with progress bar
+  list_songs        - Show all available songs
+
+Playlist Management:
+  list_playlists    - Show all available playlists
+  switch PLAYLIST   - Switch to a different playlist (e.g., switch rock)
+  create PLAYLIST   - Create a new empty playlist (e.g., create jazz)
+
+Volume Control:
+  adjust_volume +/-N - Adjust volume (e.g., adjust_volume +10)
+
+Aliases (Shortcuts):
+  mx NUMBER/LABEL    - Play song (mx for 'music play')
+  mn                 - Next song
+  mp                 - Previous song
+  mt                 - Toggle play/pause
+  ms                 - Show live status
+  mv +/-N           - Adjust volume
+  ml                 - List songs
+  mpl               - List playlists
+  msw PLAYLIST      - Switch playlist
+  mf                - Forward 30s
+  mb                - Back 30s
+  msh               - Shuffle play
+
+Tips:
+- All playlists are .txt files in the current directory
+- The live status display (ms) can be exited by pressing 'q'
+- You can use partial matches for song labels (e.g., mx drak)
+
+Examples:
+  ml                        # List available songs
+  mx 3                      # Play the third song
+  mx drake_2                # Play first matching song
+  shuffle_play              # Play playlist in random order
+  seek 1:30                 # Jump to 1 minute 30 seconds
+  seek +30                  # Skip forward 30 seconds
+  status                    # Show live progress bar
+  switch rock               # Switch to rock.txt playlist
+  adjust_volume +10         # Increase volume
+EOF
+}
