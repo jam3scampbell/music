@@ -97,8 +97,6 @@ create jazz         # Creates jazz.txt
 ```bash
 # Adjust volume
 adjust_volume +10   # Full command
-mv +10             # Quick alias
-                   # Both increase volume by 10
 ```
 
 ## Using Playlists

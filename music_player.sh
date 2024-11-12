@@ -11,7 +11,6 @@ alias mn="next_song"         # Music next
 alias mp="previous_song"     # Music previous
 alias mt="toggle_pause"      # Music toggle play/pause
 alias ms="show_live_status"  # Music status
-alias mv="adjust_volume"     # Music volume
 alias ml="list_songs"        # Music list
 alias mpl="list_playlists"   # Music playlist list
 alias msw="switch_playlist"  # Music switch playlist
@@ -351,7 +350,6 @@ Quick Commands:
   mn/mp         - Next/Previous song
   mt           - Toggle play/pause
   ms           - Show live status
-  mv +/-N      - Volume up/down
   ml           - List songs
   mpl          - List playlists
   msw NAME     - Switch playlist
@@ -402,7 +400,6 @@ Aliases (Shortcuts):
   mp                 - Previous song
   mt                 - Toggle play/pause
   ms                 - Show live status
-  mv +/-N           - Adjust volume
   ml                 - List songs
   mpl               - List playlists
   msw PLAYLIST      - Switch playlist
