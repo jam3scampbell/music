@@ -1,6 +1,6 @@
 # Command Line Music Player
 
-A true hacker must never leave the command line. This script provides terminal commands that emulate a Spotify-like music player. Songs are saved as YouTube links in txt files. Each txt file is a playlist.
+A true hacker must never touch the mouse. This script provides terminal commands that emulate a Spotify-like music player. Songs are saved as YouTube links in txt files. Each txt file is a playlist.
 
 ## Setup
 
