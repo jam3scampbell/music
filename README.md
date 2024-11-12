@@ -148,5 +148,7 @@ Run `help` in the terminal to see:
 - Usage examples
 - Tips and tricks
 
+Run `hlp` to get a concise shortcut to see the available aliases.
+
 ## Legal Notice
 This tool is provided for personal use only. Users are responsible for complying with YouTube's Terms of Service and all applicable copyright laws. The script facilitates playback of YouTube content through legal open-source tools (mpv and youtube-dl) but does not download, store, or redistribute any copyrighted content. Please respect content creators' rights and YouTube's terms of service when using this tool.
