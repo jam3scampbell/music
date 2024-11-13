@@ -23,7 +23,7 @@ alias hlp="quick_help"    # Quick help for aliases
 start_mpv() {
     local playlist=$1
     mpv --no-video --really-quiet --input-ipc-server=${SOCKET_PATH} --playlist="$playlist" &
-    sleep 1
+    sleep 0.1
 }
 
 # Helper function to get a property from mpv
@@ -105,7 +105,6 @@ list_songs() {
     awk -F' | ' '{print NR ". " $1}' "$CURRENT_PLAYLIST"
 }
 
-# Function to play a specific song by label or number
 play_song() {
     local search=$1
     if [[ -z "$search" ]]; then
@@ -132,13 +131,27 @@ play_song() {
 
     if pgrep -f "mpv.*${SOCKET_PATH}" > /dev/null; then
         pkill -f "mpv.*${SOCKET_PATH}"
-        sleep 1
+        sleep 0.1
+    fi
+
+    # Instead of playing just this song, create a playlist starting from this song
+    if [[ "$search" =~ ^[0-9]+$ ]]; then
+        # If numeric, start playlist from this number
+        awk -F' *\\| *' -v start="$search" 'NR>=start {print $2}' "$CURRENT_PLAYLIST" | tr -d ' ' > /tmp/current_playlist.txt
+        # Also add the songs before it at the end for wraparound
+        awk -F' *\\| *' -v start="$search" 'NR<start {print $2}' "$CURRENT_PLAYLIST" | tr -d ' ' >> /tmp/current_playlist.txt
+    else
+        # If label search, find the line number first
+        local line_num=$(awk -F' *\\| *' "\$1 ~ /$search/ {print NR; exit}" "$CURRENT_PLAYLIST")
+        awk -F' *\\| *' -v start="$line_num" 'NR>=start {print $2}' "$CURRENT_PLAYLIST" | tr -d ' ' > /tmp/current_playlist.txt
+        awk -F' *\\| *' -v start="$line_num" 'NR<start {print $2}' "$CURRENT_PLAYLIST" | tr -d ' ' >> /tmp/current_playlist.txt
     fi
 
     echo "Playing: $title"
-    start_mpv <(echo "$url")
+    start_mpv "/tmp/current_playlist.txt"
     echo "Use 'ms' or 'show_live_status' for live playback display"
 }
+
 
 # Function to play entire playlist
 play_playlist() {
@@ -247,7 +260,7 @@ show_live_status() {
 next_song() {
     ensure_player_running
     echo '{"command": ["playlist-next"]}' | socat - ${SOCKET_PATH} >/dev/null 2>&1
-    sleep 1
+    sleep 0.1
     show_status
 }
 
@@ -255,7 +268,7 @@ next_song() {
 previous_song() {
     ensure_player_running
     echo '{"command": ["playlist-prev"]}' | socat - ${SOCKET_PATH} >/dev/null 2>&1
-    sleep 1
+    sleep 0.1
     show_status
 }
 
@@ -280,7 +293,7 @@ seek() {
         echo "{\"command\": [\"seek\", \"$amount\"]}" | socat - ${SOCKET_PATH} >/dev/null 2>&1
     fi
     
-    sleep 0.5
+    sleep 0.1
     show_status
 }
 
