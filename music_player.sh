@@ -18,6 +18,7 @@ alias mf="seek_forward"      # Music forward 30s
 alias mb="seek_backward"     # Music back 30s
 alias msh="shuffle_play"     # Music shuffle
 alias hlp="quick_help"    # Quick help for aliases
+alias sk="seek"
 
 # Function to start mpv with proper options
 start_mpv() {
