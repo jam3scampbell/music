@@ -1,6 +1,7 @@
 #!/bin/zsh
 
-# Required dependencies: mpv youtube-dl
+# Required dependencies: mpv youtube-dl socat
+# Optional dependencies: fzf
 
 SOCKET_PATH=/tmp/mpvsocket
 CURRENT_PLAYLIST=playlist.txt  # Default playlist
@@ -19,6 +20,8 @@ alias mb="seek_backward"     # Music back 30s
 alias msh="shuffle_play"     # Music shuffle
 alias hlp="quick_help"    # Quick help for aliases
 alias sk="seek"
+
+HAS_FZF=$(command -v fzf)
 
 # Function to start mpv with proper options
 start_mpv() {
@@ -76,12 +79,12 @@ create_playlist() {
         echo "Please specify a playlist name"
         return 1
     fi
-    
+
     # If just the name is given without .txt, append it
     if [[ ! $playlist_name =~ \.txt$ ]]; then
         playlist_name="${playlist_name}.txt"
     fi
-    
+
     if [[ ! -f "$playlist_name" ]]; then
         touch "$playlist_name"
         echo "Created new playlist: $playlist_name"
@@ -103,25 +106,32 @@ ensure_player_running() {
 # Function to list all songs with their labels and indices
 list_songs() {
     echo "Available songs in $CURRENT_PLAYLIST:"
-    awk -F' | ' '{print NR ". " $1}' "$CURRENT_PLAYLIST"
+    awk -F' *\\| *' '{print NR ". " $1}' "$CURRENT_PLAYLIST"
 }
 
 play_song() {
     local search=$1
-    if [[ -z "$search" ]]; then
-        echo "Please provide a song label or number"
-        list_songs
-        return 1
-    fi
 
     # If numeric, play that line number
     if [[ "$search" =~ ^[0-9]+$ ]]; then
         local url=$(awk -F' *\\| *' "NR==$search {print \$2}" "$CURRENT_PLAYLIST" | tr -d ' ')
         local title=$(awk -F' *\\| *' "NR==$search {print \$1}" "$CURRENT_PLAYLIST")
-    else
-        # Otherwise search for label
+    elif [[ -z "$HAS_FZF" ]]; then
+        if [[ -z "$search" ]]; then
+            # If no argument provided, use fzf to search interactively
+            local selection=$(awk -F' *\\| *' '{print NR ". " $1}' "$CURRENT_PLAYLIST" | fzf --height 40% --reverse)
+        fi
+
+        # Search for label
         local url=$(awk -F' *\\| *' "\$1 ~ /$search/ {print \$2; exit}" "$CURRENT_PLAYLIST" | tr -d ' ')
         local title=$(awk -F' *\\| *' "\$1 ~ /$search/ {print \$1; exit}" "$CURRENT_PLAYLIST")
+    else
+        # If fzf is installed, use it to search interactively, selecting the first match if only one is found
+        local selection=$(awk -F' *\\| *' '{print NR ". " $1}' "$CURRENT_PLAYLIST" | fzf --height 40% --reverse -q "$search" -1)
+
+        local number=$(echo "$selection" | cut -d'.' -f1)
+        local url=$(awk -F' *\\| *' "NR==$number {print \$2}" "$CURRENT_PLAYLIST" | tr -d '[:space:]')
+        local title=$(awk -F' *\\| *' "NR==$number {print \$1}" "$CURRENT_PLAYLIST")
     fi
 
     if [[ -z "$url" ]]; then
@@ -181,20 +191,20 @@ shuffle_play() {
         pkill -f "mpv.*${SOCKET_PATH}"
         sleep 1
     fi
-    
+
     cleanup_tmp_files
-    
+
     # Create shuffled playlist using shuf for better randomization
     awk -F' *\\| *' '{print $0}' "$CURRENT_PLAYLIST" | \
         shuf | \
         awk '{print NR ". " $0}' > /tmp/shuffled_full.txt
-    
+
     # Extract URLs
     awk -F' *\\| *' '{print $2}' /tmp/shuffled_full.txt | tr -d ' ' > /tmp/shuffled_playlist.txt
-    
+
     echo "Starting shuffled playlist..."
     start_mpv "/tmp/shuffled_playlist.txt"
-    
+
     echo "Current shuffle order:"
     awk -F' *\\| *' '{print NR ". " $1}' /tmp/shuffled_full.txt
     echo "Use 'ms' or 'show_live_status' for live playback display"
@@ -205,10 +215,10 @@ show_live_status() {
     ensure_player_running
     echo "Press q to exit live status"
     echo -e "\033[?25l"  # Hide cursor
-    
+
     # Save current terminal state
     stty -echo -icanon   # Set terminal to raw mode
-    
+
     while true; do
         # Check for 'q' keypress immediately
         if read -t 0.1 -k 1 input; then
@@ -216,21 +226,21 @@ show_live_status() {
                 break
             fi
         fi
-        
+
         # Clear previous lines and move cursor up
         echo -en "\r\033[K"  # Clear current line
-        echo -en "\033[2A"   # Move up 2 lines
-        
+        echo -en "\033[1A"   # Move up 1 lines
+
         local title=$(get_mpv_property "media-title")
         local position=$(get_mpv_property "time-pos")
         local duration=$(get_mpv_property "duration")
-        
+
         # Format the display
         echo -en "\rNow Playing: $title\n"
-        
+
         if [[ -n "$position" && "$position" != "null" && -n "$duration" && "$duration" != "null" ]]; then
             printf "\r[%d:%02d / %d:%02d]" $((position/60)) $((position%60)) $((duration/60)) $((duration%60))
-            
+
             # Create progress bar
             local width=50
             local progress=$(( (position * width) / duration ))
@@ -249,10 +259,10 @@ show_live_status() {
             echo -en "\r[0:00 / 0:00] [                                                ]"
         fi
     done
-    
+
     # Restore terminal state
     stty echo icanon
-    
+
     echo -e "\n"  # Move to new line
     echo -e "\033[?25h"  # Show cursor
 }
@@ -282,7 +292,7 @@ seek() {
     fi
 
     ensure_player_running
-    
+
     # Handle timestamp format (mm:ss)
     if [[ "$amount" =~ ^[0-9]+:[0-9]+$ ]]; then
         local minutes=$(echo $amount | cut -d: -f1)
@@ -295,6 +305,7 @@ seek() {
     fi
     
     sleep 0.1
+    
     show_status
 }
 
@@ -337,19 +348,19 @@ stop_playback() {
 # Function to show current playback status
 show_status() {
     ensure_player_running
-    
+
     local title=$(get_mpv_property "media-title")
     local position=$(get_mpv_property "time-pos")
     local duration=$(get_mpv_property "duration")
-    
+
     echo "Current track: $title"
-    
+
     if [[ -n "$position" && "$position" != "null" ]]; then
         printf "Position: %d:%02d\n" $((position/60)) $((position%60))
     else
         echo "Position: 0:00"
     fi
-    
+
     if [[ -n "$duration" && "$duration" != "null" ]]; then
         printf "Duration: %d:%02d\n" $((duration/60)) $((duration%60))
     else
