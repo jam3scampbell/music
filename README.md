@@ -21,6 +21,7 @@ song_label | https://www.youtube.com/watch?v=...
 another_song | https://www.youtube.com/watch?v=...
 ```
 3. Source the script: `source music_player.sh`
+4. (Optional) Uncomment the MUSIC\_DIR variable in `music_player.sh` and set it to the absolute path of the music directory if you want to be able to run music commands from anywhere. By default, you can only run them in the directory containing the playlists. 
 
 ## Commands and Aliases
 

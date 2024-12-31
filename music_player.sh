@@ -2,8 +2,11 @@
 
 # Required dependencies: mpv youtube-dl
 
+# MUSIC_DIR="/Users/james/code/music"  # Uncomment and modify this line as needed
+MUSIC_DIR="${MUSIC_DIR:-$(pwd)}"     # If MUSIC_DIR isn't set above, use current directory
+CURRENT_PLAYLIST="$MUSIC_DIR/playlist.txt"
+
 SOCKET_PATH=/tmp/mpvsocket
-CURRENT_PLAYLIST=playlist.txt  # Default playlist
 
 # Aliases for common commands - all prefixed with 'm' to avoid conflicts
 alias mx="play_song"         # Music play by number/name
@@ -43,23 +46,24 @@ list_playlists() {
     echo "Available playlists:"
     echo "Current playlist: $CURRENT_PLAYLIST"
     echo "------------------------"
-    ls -1 *.txt
+    ls -1 "$MUSIC_DIR"/*.txt
 }
 
 switch_playlist() {
     local playlist_name=$1
-    if [ -z "$playlist_name" ]; then
+    if [[ -z "$playlist_name" ]]; then
         echo "Please specify a playlist name"
         list_playlists
         return 1
     fi
-    case "$playlist_name" in
-        *.txt) ;;
-        *) playlist_name=$playlist_name.txt ;;
-    esac
 
-    if [ -f "$playlist_name" ]; then
-        CURRENT_PLAYLIST="$playlist_name"
+    # If just the name is given without .txt, append it
+    if [[ ! $playlist_name =~ \.txt$ ]]; then
+        playlist_name="${playlist_name}.txt"
+    fi
+
+    if [[ -f "$MUSIC_DIR/$playlist_name" ]]; then
+        CURRENT_PLAYLIST="$MUSIC_DIR/$playlist_name"
         echo "Switched to playlist: $playlist_name"
         stop_playback
     else
@@ -77,19 +81,19 @@ create_playlist() {
         return 1
     fi
     
-    # If just the name is given without .txt, append it
     if [[ ! $playlist_name =~ \.txt$ ]]; then
         playlist_name="${playlist_name}.txt"
     fi
     
-    if [[ ! -f "$playlist_name" ]]; then
-        touch "$playlist_name"
+    if [[ ! -f "$MUSIC_DIR/$playlist_name" ]]; then
+        touch "$MUSIC_DIR/$playlist_name"
         echo "Created new playlist: $playlist_name"
     else
         echo "Playlist already exists: $playlist_name"
         return 1
     fi
 }
+
 
 # Function to start mpv if it's not running
 ensure_player_running() {
