@@ -18,7 +18,7 @@ echo "Extracting playlist info to $output_file..."
 echo "Preview of how labels will look:"
 echo "--------------------------------"
 
-youtube-dl --get-title --get-id "$playlist_url" | \
+yt-dlp --get-title --get-id "$playlist_url" | \
 while read -r title; do
     read -r video_id 
     
